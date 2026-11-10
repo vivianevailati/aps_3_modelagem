@@ -1,0 +1,25 @@
+stateDiagram-v2
+    [*] --> Contexto
+
+    state "Contexto da Conversa" as Contexto {
+        [*] --> Novo
+        Novo --> Coletando: iniciarSessao() [sessaoValida] / criarContexto()
+        Coletando --> Coletando: receberMensagem() [dadosParciais] / mesclarDados()
+        Coletando --> Pronto: validarDados() [camposMinimosPreenchidos] / marcarComoPronto()
+        Pronto --> Processando: iniciarConsultaRAG() [contextoConsistente] / publicarContexto()
+        Processando --> Pronto: respostaConcluida() [sessaoAtiva] / registrarInteracao()
+        Processando --> Coletando: solicitarComplemento() [informacaoInsuficiente] / registrarPendencias()
+        Pronto --> Coletando: novaPergunta() [novosDadosNecessarios] / reabrirColeta()
+        Coletando --> Expirado: expirarSessao() [tempoLimiteAtingido] / encerrarSessao()
+        Pronto --> Expirado: expirarSessao() [tempoLimiteAtingido] / encerrarSessao()
+        Processando --> Expirado: expirarSessao() [tempoLimiteAtingido] / cancelarProcessamento()
+
+        state Coletando {
+            [*] --> AguardandoDados
+            AguardandoDados: entry / exibirCamposPendentes()
+            AguardandoDados: do / aguardarRespostaUsuario()
+            AguardandoDados: exit / validarNovosDados()
+        }
+    }
+
+    Expirado --> [*]

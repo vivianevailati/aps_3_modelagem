@@ -1,0 +1,45 @@
+flowchart TB
+    %% Raias representam os responsáveis pelo workflow.
+    subgraph R1["RAIA 1 — USUÁRIO / EXPORTADOR"]
+        A([Início])
+        B["Enviar pergunta em linguagem natural"]
+        C["Responder à solicitação de dados pendentes"]
+    end
+
+    subgraph R2["RAIA 2 — BACK-END / GERENCIAMENTO DE CONTEXTO"]
+        D["Receber mensagem e identificar sessão"]
+        E["Recuperar ContextoDTO da sessão"]
+        F["Extrair informações da mensagem"]
+        G["Mesclar dados novos com contexto existente"]
+        H{"Todos os campos mínimos estão preenchidos?"}
+        I["Identificar somente os campos ausentes"]
+        J1["Atualizar contexto com dados parciais"]
+        J2["Atualizar contexto completo e marcar como PRONTO"]
+        L["Publicar evento ContextoProntoDTO"]
+    end
+
+    subgraph R3["RAIA 3 — SERVIÇOS / INFRAESTRUTURA"]
+        M["Consultar repositório de contexto"]
+        N["Validar consistência dos dados da operação"]
+        O1["Persistir contexto parcial"]
+        O2["Persistir contexto completo"]
+        P["Preparar contexto para o pipeline RAG"]
+        T1["Registrar evento de auditoria"]
+        T2["Preparar pacote de contexto"]
+    end
+
+    A --> B --> D --> E --> M --> F
+    F --> G --> N --> H
+
+    H -- "[não: existem campos ausentes]" --> I
+    I --> J1 --> O1 --> C
+    C --> D
+
+    H -- "[sim: dados mínimos completos]" --> J2
+    J2 --> O2 --> L
+    L --> FORK{{"FORK — DIVISÃO"}}
+    FORK --> T1
+    FORK --> T2
+    T1 --> JOIN{{"JOIN — SINCRONIZAÇÃO"}}
+    T2 --> JOIN
+    JOIN --> P --> FIM([Contexto disponível para o RAG])

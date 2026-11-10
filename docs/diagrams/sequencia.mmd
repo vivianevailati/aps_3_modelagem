@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    actor Usuario
+    participant API as API de Conversas
+    participant Contexto as Servico de Contexto
+    participant Repo as Repositorio de Contexto
+    participant NLP as Extrator de Dados NLP
+    participant Coletor as Coletor da Operacao
+    participant Evento as Barramento de Eventos
+    participant RAG as Orquestrador RAG
+
+    Usuario->>API: enviarMensagem(MensagemDTO)
+    API->>Contexto: recuperarContexto(SessaoDTO)
+    Contexto->>Repo: buscarPorSessao(idSessao)
+    Repo-->>Contexto: ContextoDTO ou null
+    Contexto-->>API: ContextoDTO
+
+    API->>NLP: extrairInformacoes(texto, ContextoDTO)
+    NLP-->>API: ExtracaoDTO(produto, NCM, origem, destino, quantidade, finalidade)
+
+    API->>Coletor: consolidarDados(ContextoDTO, ExtracaoDTO)
+    Coletor->>Coletor: identificarCamposPendentes(ContextoDTO)
+
+    alt Existem campos obrigatorios pendentes
+        Coletor-->>API: ColetaDTO(status=PENDENTE, camposFaltantes)
+        API->>Contexto: atualizarContexto(ContextoAtualizacaoDTO)
+        Contexto->>Repo: salvar(ContextoDTO)
+        Repo-->>Contexto: ContextoDTO atualizado
+        Contexto-->>API: ContextoDTO atualizado
+        API-->>Usuario: solicitarDadosPendentes(PerguntaDTO)
+    else Dados minimos preenchidos
+        Coletor-->>API: ColetaDTO(status=COMPLETO, operacaoDTO)
+        API->>Contexto: atualizarContexto(ContextoAtualizacaoDTO)
+        Contexto->>Repo: salvar(ContextoDTO)
+        Repo-->>Contexto: ContextoDTO atualizado
+        Contexto-->>API: ContextoDTO atualizado
+        API-)Evento: publicarContextoPronto(ContextoProntoDTO)
+        Evento-)RAG: consumirContextoPronto(ContextoProntoDTO)
+        API-->>Usuario: apresentarStatusColeta(ConfirmacaoDTO)
+    end
