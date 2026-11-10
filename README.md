@@ -1,7 +1,7 @@
 # aps_3_modelagem
 Dossiê de Arquitetura Viva e Modelagem — Assistente IA Fiep Export
 
-1. Contextualização da funcionalidade
+Contextualização da funcionalidade
 O Assistente de IA para Exportação tem como objetivo apoiar pequenas indústrias na compreensão de regras, documentos e procedimentos necessários à exportação. A solução recebe perguntas em linguagem natural e utiliza o contexto da operação para fornecer orientações mais adequadas.
 
 Este dossiê detalha a funcionalidade de Coleta de Dados da Operação e Gerenciamento de Contexto, responsável por manter as informações já fornecidas pelo usuário e identificar quais dados ainda precisam ser coletados antes de encaminhar uma consulta ao pipeline RAG.
@@ -19,10 +19,16 @@ O contexto da operação pode conter produto, NCM, país de origem, país de des
 6. Se houver pendências, solicita somente os campos ausentes e atualiza o contexto.
 7. Se os dados estiverem completos, persiste o contexto e publica um evento para o pipeline RAG.
 
-ADR 0001 — Persistência incremental do contexto da operação
+   Visão Arquitetural Macro C4 (Nível 2)
 
-Status: Aprovado
-Contexto
+   A visão de contêineres apresenta as unidades executáveis e os armazenamentos que participam da funcionalidade. A arquitetura proposta utiliza React/TypeScript na interface, Node.js/TypeScript nos serviços de conversação e contexto, PostgreSQL 16 para persistência, RabbitMQ para eventos assíncronos e Python/FastAPI na orquestração RAG.
+
+A separação entre API, serviço de contexto e orquestrador RAG reduz o acoplamento entre a coleta de dados e a geração de respostas. O PostgreSQL mantém o histórico e os dados estruturados da operação. O RabbitMQ permite encaminhar o contexto consolidado de forma assíncrona, sem manter a requisição do usuário bloqueada durante todo o processamento RAG.
+
+As tecnologias representam uma proposta arquitetural para o dossiê e devem ser compatibilizadas com as decisões efetivamente adotadas pela equipe.
+
+Registro de Decisão Arquitetural (ADR 0001)
+
 O assistente precisa manter informações fornecidas em mensagens diferentes e solicitar somente os dados ainda ausentes. Tratar cada pergunta isoladamente provocaria repetição de perguntas e perda de informações importantes para a análise de exportação.
 Decisão
 Adotar um serviço de gerenciamento de contexto com persistência incremental em PostgreSQL 16 e coleta por campos (slot filling). A cada mensagem, o sistema recupera o contexto da sessão, extrai novos dados, mescla as informações, identifica campos pendentes e persiste a atualização. Quando os dados mínimos estiverem completos, publica o evento ContextoProntoDTO para o pipeline RAG.
